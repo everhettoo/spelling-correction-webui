@@ -36,8 +36,6 @@ const TextCorrectionInput = () => {
           .catch((error) => console.error("Error fetching corrections:", error));
       }, 500);
     }
-
-
   }, [inputText]);
 
   // Detect clicks outside suggestion box
@@ -114,7 +112,7 @@ const TextCorrectionInput = () => {
           <Card className="p-3 border-success shadow-sm flex-fill">
             <Card.Body>
               <Form.Label className="fw-bold">Corrected Text:</Form.Label>
-              <div className="p-3 bg-light rounded" style={{ fontSize: "18px", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "300px", overflowY: "auto"}}>
+              <div className="p-3 bg-light rounded" style={{ fontSize: "18px", whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: "300px", maxHeight: "300px", overflowY: "auto" }}>
                 {inputText.split(/(\s+)/).map((word, index) => {
                   const cleanedWord = word.replace(/\W/g, "");
 
@@ -138,12 +136,11 @@ const TextCorrectionInput = () => {
                             zIndex: 1000,
                             width: "auto",
                             minWidth: "max-content",
-                            maxWidth: "200px", // Adjust this as needed
+                            maxWidth: "200px",
+                            maxHeight: "120px",
+                            overflowY: "auto",
                             top: "100%",
                             left: 0,
-                            whiteSpace: "nowrap", // Prevents line breaks
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
                           }}
                         >
                           {suggestions.map((suggestion, idx) => (
@@ -151,11 +148,6 @@ const TextCorrectionInput = () => {
                               key={idx}
                               variant="light"
                               className="d-block w-100 text-start"
-                              style={{
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
                               onClick={() => handleSuggestionClick(suggestion)}
                             >
                               {suggestion}
@@ -163,7 +155,6 @@ const TextCorrectionInput = () => {
                           ))}
                         </div>
                       )}
-
                     </span>
                   ) : (
                     <span key={index}>{word}</span>
