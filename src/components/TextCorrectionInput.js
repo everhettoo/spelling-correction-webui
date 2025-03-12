@@ -22,15 +22,39 @@ const TextCorrectionInput = () => {
           .post("http://localhost:8000/review", { input_text: inputText })
           .then((response) => {
             let tokenSuggestions = {};
+
             response.data.doc.paragraphs.forEach((paragraph) => {
               paragraph.sentences.forEach((sentence) => {
+                let newTokens = [];
+                let prevToken = null;
+
                 sentence.tokens.forEach((token) => {
+                  if (prevToken && token.word_type === 5) {
+                    let mergedWord = prevToken.source + token.source;
+                    let newSuggestions = {};
+
+                    Object.keys(prevToken.suggestions).forEach((key) => {
+                      newSuggestions[key] = prevToken.suggestions[key] + token.source;
+                    });
+
+                    newTokens.pop(); // Remove previous token
+                    newTokens.push({ source: mergedWord, suggestions: newSuggestions });
+                    prevToken = null;
+                  } else {
+                    newTokens.push(token);
+                    prevToken = token;
+                  }
+                });
+
+                newTokens.forEach((token) => {
                   if (token.suggestions && Object.keys(token.suggestions).length > 0) {
-                    tokenSuggestions[token.source] = Object.values(token.suggestions);
+                    tokenSuggestions[token.source] = Object.values(token.suggestions).flat();
                   }
                 });
               });
             });
+
+            console.log("Processed Token Suggestions:", JSON.stringify(tokenSuggestions, null, 2));
             setCorrections(tokenSuggestions);
           })
           .catch((error) => console.error("Error fetching corrections:", error));
@@ -70,7 +94,7 @@ const TextCorrectionInput = () => {
     setInputText((prevText) => {
       const words = prevText.split(/(\s+)/);
       const newWords = words.map((word) =>
-        word.replace(/\W/g, "") === selectedWord ? suggestion : word
+        word.trim() === selectedWord ? suggestion : word
       );
       return newWords.join("");
     });
@@ -114,7 +138,7 @@ const TextCorrectionInput = () => {
               <Form.Label className="fw-bold">Corrected Text:</Form.Label>
               <div className="p-3 bg-light rounded" style={{ fontSize: "18px", whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: "300px", maxHeight: "300px", overflowY: "auto" }}>
                 {inputText.split(/(\s+)/).map((word, index) => {
-                  const cleanedWord = word.replace(/\W/g, "");
+                  const cleanedWord = word.trim();
 
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
