@@ -53,8 +53,6 @@ const TextCorrectionInput = () => {
                 });
               });
             });
-
-            console.log("Processed Token Suggestions:", JSON.stringify(tokenSuggestions, null, 2));
             setCorrections(tokenSuggestions);
           })
           .catch((error) => console.error("Error fetching corrections:", error));
