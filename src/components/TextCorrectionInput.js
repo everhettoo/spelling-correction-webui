@@ -29,7 +29,7 @@ const TextCorrectionInput = () => {
                 let prevToken = null;
 
                 sentence.tokens.forEach((token) => {
-                  if (prevToken && token.word_type === 5) {
+                  if (prevToken && (token.word_type === 5 || token.word_type === 6)) {
                     let mergedWord = prevToken.source + token.source;
                     let newSuggestions = {};
 
