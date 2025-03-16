@@ -77,6 +77,7 @@ const TextCorrectionInput = () => {
       const updatedWords = words.map((word, index) => {
         if (word.trim() === selectedWord) {
           if (occurrenceCount === selectedWordIndex) {
+            occurrenceCount++;
             return suggestion;
           }
           occurrenceCount++;
