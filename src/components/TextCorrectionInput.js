@@ -30,6 +30,17 @@ const TextCorrectionInput = () => {
 
                 sentence.tokens.forEach((token) => {
                   if (prevToken && (token.word_type === 5 || token.word_type === 6)) {
+                    let mergedWord = prevToken.source + "'" + token.source;
+                    let newSuggestions = {};
+
+                    Object.keys(prevToken.suggestions).forEach((key) => {
+                      newSuggestions[key] = prevToken.suggestions[key] + token.source;
+                    });
+
+                    newTokens.pop(); // Remove previous token
+                    newTokens.push({ source: mergedWord, suggestions: newSuggestions });
+                    prevToken = null;
+                  } else if(token.word_type === 3) {
                     let mergedWord = prevToken.source + token.source;
                     let newSuggestions = {};
 
