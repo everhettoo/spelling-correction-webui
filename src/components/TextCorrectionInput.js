@@ -1,22 +1,28 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Container, Form, Card, Row, Col, Badge, Button } from "react-bootstrap";
+import { Container, Form, Card, Row, Col, Badge, Button, Spinner, Alert } from "react-bootstrap";
 
 const TextCorrectionInput = () => {
   const [inputText, setInputText] = useState("");
   const [corrections, setCorrections] = useState({});
   const [selectedWord, setSelectedWord] = useState(null);
+  const [selectedWordIndex, setSelectedWordIndex] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const wordRef = useRef(null);
   const suggestionBoxRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  // Debounced API Call
   useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     if (inputText.trim()) {
+      setLoading(true);
+      setError(null);
+
       timeoutRef.current = setTimeout(() => {
         axios
           .post("http://localhost:8000/review", { input_text: inputText })
@@ -25,53 +31,29 @@ const TextCorrectionInput = () => {
 
             response.data.doc.paragraphs.forEach((paragraph) => {
               paragraph.sentences.forEach((sentence) => {
-                let newTokens = [];
-                let prevToken = null;
-
                 sentence.tokens.forEach((token) => {
-                  if (prevToken && (token.word_type === 5 || token.word_type === 6)) {
-                    let mergedWord = prevToken.source + "'" + token.source;
-                    let newSuggestions = {};
-
-                    Object.keys(prevToken.suggestions).forEach((key) => {
-                      newSuggestions[key] = prevToken.suggestions[key] + "'" + token.source;
-                    });
-
-                    newTokens.pop(); // Remove previous token
-                    newTokens.push({ source: mergedWord, suggestions: newSuggestions });
-                    prevToken = null;
-                  } else if(token.word_type === 3) {
-                    let mergedWord = prevToken.source + token.source;
-                    let newSuggestions = {};
-
-                    Object.keys(prevToken.suggestions).forEach((key) => {
-                      newSuggestions[key] = prevToken.suggestions[key] + token.source;
-                    });
-
-                    newTokens.pop(); // Remove previous token
-                    newTokens.push({ source: mergedWord, suggestions: newSuggestions });
-                    prevToken = null;
-                  } else {
-                    newTokens.push(token);
-                    prevToken = token;
-                  }
-                });
-
-                newTokens.forEach((token) => {
                   if (token.suggestions && Object.keys(token.suggestions).length > 0) {
-                    tokenSuggestions[token.source] = Object.values(token.suggestions).flat();
+                    if (!tokenSuggestions[token.source]) {
+                      tokenSuggestions[token.source] = [];
+                    }
+                    tokenSuggestions[token.source].push(Object.values(token.suggestions).flat());
                   }
                 });
               });
             });
+
             setCorrections(tokenSuggestions);
+            setLoading(false);
           })
-          .catch((error) => console.error("Error fetching corrections:", error));
+          .catch((error) => {
+            setError("Failed to fetch corrections. Please try again.");
+            setLoading(false);
+            console.error("Error fetching corrections:", error);
+          });
       }, 500);
     }
   }, [inputText]);
 
-  // Detect clicks outside suggestion box
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -87,30 +69,36 @@ const TextCorrectionInput = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleWordClick = (word, event) => {
-    if (corrections[word]) {
-      setSelectedWord(word);
-      setSuggestions(corrections[word]);
-      setShowSuggestions(true);
-
-      if (event.target) {
-        wordRef.current = event.target;
-      }
-    }
-  };
-
   const handleSuggestionClick = (suggestion) => {
     setInputText((prevText) => {
       const words = prevText.split(/(\s+)/);
-      const newWords = words.map((word) =>
-        word.trim() === selectedWord ? suggestion : word
-      );
-      return newWords.join("");
+      let occurrenceCount = 0;
+
+      const updatedWords = words.map((word, index) => {
+        if (word.trim() === selectedWord) {
+          if (occurrenceCount === selectedWordIndex) {
+            return suggestion;
+          }
+          occurrenceCount++;
+        }
+        return word;
+      });
+
+      return updatedWords.join("");
     });
 
     setSelectedWord(null);
-    setSuggestions([]);
     setShowSuggestions(false);
+  };
+
+  const handleWordClick = (word, index, event) => {
+    if (corrections[word]) {
+      setSelectedWord(word);
+      setSelectedWordIndex(index);
+      setSuggestions(corrections[word][index] || []);
+      setShowSuggestions(true);
+      wordRef.current = event.target;
+    }
   };
 
   return (
@@ -137,6 +125,13 @@ const TextCorrectionInput = () => {
                 autoCapitalize="off"
               />
               <small className="text-muted">{inputText.length}/5000 characters</small>
+              {loading && (
+                <div className="mt-3 text-center">
+                  <Spinner animation="border" variant="primary" />
+                  <p className="text-muted">Checking text...</p>
+                </div>
+              )}
+              {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
             </Card.Body>
           </Card>
         </Col>
@@ -148,44 +143,20 @@ const TextCorrectionInput = () => {
               <div className="p-3 bg-light rounded" style={{ fontSize: "18px", whiteSpace: "pre-wrap", wordBreak: "break-word", minHeight: "300px", maxHeight: "300px", overflowY: "auto" }}>
                 {inputText.split(/(\s+)/).map((word, index) => {
                   const cleanedWord = word.trim();
+                  const wordOccurrenceIndex = inputText.split(/(\s+)/).slice(0, index).filter(w => w.trim() === cleanedWord).length;
 
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
-                      <Badge
-                        bg="danger"
-                        className="px-2 py-1 me-1"
-                        style={{ cursor: "pointer" }}
-                        onClick={(e) => handleWordClick(cleanedWord, e)}
-                        ref={selectedWord === cleanedWord ? wordRef : null}
-                      >
+                      <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
                         {word}
                       </Badge>
-
-                      {showSuggestions && selectedWord === cleanedWord && (
-                        <div
-                          ref={suggestionBoxRef}
-                          className="position-absolute bg-white border shadow rounded p-2"
-                          style={{
-                            zIndex: 1000,
-                            width: "auto",
-                            minWidth: "max-content",
-                            maxWidth: "200px",
-                            maxHeight: "120px",
-                            overflowY: "auto",
-                            top: "100%",
-                            left: 0,
-                          }}
-                        >
-                          {suggestions.map((suggestion, idx) => (
-                            <Button
-                              key={idx}
-                              variant="light"
-                              className="d-block w-100 text-start"
-                              onClick={() => handleSuggestionClick(suggestion)}
-                            >
+                      {showSuggestions && selectedWord === cleanedWord && selectedWordIndex === wordOccurrenceIndex && (
+                        <div ref={suggestionBoxRef} className="position-absolute bg-white border shadow rounded p-2" style={{ zIndex: 1000, width: "auto", minWidth: "max-content", maxWidth: "200px", maxHeight: "120px", overflowY: "auto", top: "100%", left: 0 }}>
+                          {suggestions.length > 0 ? suggestions.map((suggestion, idx) => (
+                            <Button key={idx} variant="light" className="d-block w-100 text-start" onClick={() => handleSuggestionClick(suggestion)}>
                               {suggestion}
                             </Button>
-                          ))}
+                          )) : <p className="text-muted p-2">No suggestions</p>}
                         </div>
                       )}
                     </span>
