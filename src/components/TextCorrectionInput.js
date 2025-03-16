@@ -34,7 +34,7 @@ const TextCorrectionInput = () => {
                     let newSuggestions = {};
 
                     Object.keys(prevToken.suggestions).forEach((key) => {
-                      newSuggestions[key] = prevToken.suggestions[key] + token.source;
+                      newSuggestions[key] = prevToken.suggestions[key] + "'" + token.source;
                     });
 
                     newTokens.pop(); // Remove previous token
