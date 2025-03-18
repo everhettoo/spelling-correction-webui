@@ -16,7 +16,7 @@ const TextCorrectionInput = () => {
   const suggestionBoxRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  useEffect(() => {
+  const handleSubmit = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     if (inputText.trim()) {
@@ -52,7 +52,7 @@ const TextCorrectionInput = () => {
           });
       }, 500);
     }
-  }, [inputText]);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -124,14 +124,17 @@ const TextCorrectionInput = () => {
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="off"
+                disabled={loading}
               />
               <small className="text-muted">{inputText.length}/5000 characters</small>
-              {loading && (
-                <div className="mt-3 text-center">
-                  <Spinner animation="border" variant="primary" />
-                  <p className="text-muted">Checking text...</p>
-                </div>
-              )}
+              <Button
+                variant="primary"
+                onClick={handleSubmit}
+                className="mt-2 w-100"
+                disabled={loading}
+              >
+                {loading ? <Spinner animation="border" size="sm" /> : "Submit"}
+              </Button>
               {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
             </Card.Body>
           </Card>
