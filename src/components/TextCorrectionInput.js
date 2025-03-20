@@ -184,10 +184,11 @@ const TextCorrectionInput = () => {
                   const cleanedWord = word.trim();
                   const wordOccurrenceIndex = inputText.split(/(\s+)/).slice(0, index).filter(w => w.trim() === cleanedWord).length;
                   const correction = corrections[cleanedWord] && corrections[cleanedWord][wordOccurrenceIndex];
+                  console.log(correction);
 
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
-                      {correction && correction.length > 1 ? (
+                      {correction && correction.length > 0 ? (
                         <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
                           {word}
                         </Badge>
