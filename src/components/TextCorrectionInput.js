@@ -66,6 +66,13 @@ const TextCorrectionInput = () => {
 
                 newTokens.forEach((token) => {
                   if ((token.suggestions && Object.keys(token.suggestions).length > 0) || (token.word_type === 2)) {
+                    var firstChar = token.source.substring(0, 1);
+                    if (firstChar === firstChar.toUpperCase()) {
+                        Object.keys(token.suggestions).forEach((key) => {
+                          token.suggestions[key] = token.suggestions[key].substring(0, 1).toUpperCase() + token.suggestions[key].substring(1, token.suggestions[key].length);
+                        });
+                    }
+
                     if (!tokenSuggestions[token.source]) {
                       tokenSuggestions[token.source] = [];
                     }
@@ -184,7 +191,6 @@ const TextCorrectionInput = () => {
                   const cleanedWord = word.trim();
                   const wordOccurrenceIndex = inputText.split(/(\s+)/).slice(0, index).filter(w => w.trim() === cleanedWord).length;
                   const correction = corrections[cleanedWord] && corrections[cleanedWord][wordOccurrenceIndex];
-                  console.log(correction);
 
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
