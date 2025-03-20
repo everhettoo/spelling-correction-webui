@@ -31,8 +31,41 @@ const TextCorrectionInput = () => {
 
             response.data.doc.paragraphs.forEach((paragraph) => {
               paragraph.sentences.forEach((sentence) => {
+                let newTokens = [];
+                let prevToken = null;
+
                 sentence.tokens.forEach((token) => {
-                  if (token.suggestions && Object.keys(token.suggestions).length > 0) {
+                  if (prevToken && (token.word_type === 5 || token.word_type === 6)) {
+                    let mergedWord = prevToken.source + "'" + token.source;
+                    let newSuggestions = {};
+
+                    Object.keys(prevToken.suggestions).forEach((key) => {
+                      newSuggestions[key] = prevToken.suggestions[key] + "'" + token.source;
+                    });
+
+                    newTokens.pop(); // Remove previous token
+                    newTokens.push({ source: mergedWord, suggestions: newSuggestions });
+                    prevToken = null;
+                  } else if(token.word_type === 3) {
+                    let mergedWord = prevToken.source + token.source;
+                    let mergedWordType = prevToken.word_type;
+                    let newSuggestions = {};
+
+                    Object.keys(prevToken.suggestions).forEach((key) => {
+                      newSuggestions[key] = prevToken.suggestions[key] + token.source;
+                    });
+
+                    newTokens.pop(); // Remove previous token
+                    newTokens.push({ source: mergedWord, word_type: mergedWordType, suggestions: newSuggestions });
+                    prevToken = null;
+                  } else {
+                    newTokens.push(token);
+                    prevToken = token;
+                  }
+                });
+
+                newTokens.forEach((token) => {
+                  if ((token.suggestions && Object.keys(token.suggestions).length > 0) || (token.word_type === 2)) {
                     if (!tokenSuggestions[token.source]) {
                       tokenSuggestions[token.source] = [];
                     }
@@ -96,7 +129,9 @@ const TextCorrectionInput = () => {
     if (corrections[word]) {
       setSelectedWord(word);
       setSelectedWordIndex(index);
-      setSuggestions(corrections[word][index] || []);
+      // Ensure suggestions is always an array
+      const wordCorrections = corrections[word][index];
+      setSuggestions(Array.isArray(wordCorrections) ? wordCorrections : []);
       setShowSuggestions(true);
       wordRef.current = event.target;
     }
@@ -148,12 +183,20 @@ const TextCorrectionInput = () => {
                 {inputText.split(/(\s+)/).map((word, index) => {
                   const cleanedWord = word.trim();
                   const wordOccurrenceIndex = inputText.split(/(\s+)/).slice(0, index).filter(w => w.trim() === cleanedWord).length;
+                  const correction = corrections[cleanedWord] && corrections[cleanedWord][wordOccurrenceIndex];
 
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
-                      <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
-                        {word}
-                      </Badge>
+                      {correction && correction.length > 1 ? (
+                        <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
+                          {word}
+                        </Badge>
+                      ) : (
+                        <Badge bg="warning" className="px-2 py-1 me-1" style={{ cursor: "pointer" }}>
+                          {word}
+                        </Badge>
+                      )}
+
                       {showSuggestions && selectedWord === cleanedWord && selectedWordIndex === wordOccurrenceIndex && (
                         <div ref={suggestionBoxRef} className="position-absolute bg-white border shadow rounded p-2" style={{ zIndex: 1000, width: "auto", minWidth: "max-content", maxWidth: "200px", maxHeight: "120px", overflowY: "auto", top: "100%", left: 0 }}>
                           {suggestions.length > 0 ? suggestions.map((suggestion, idx) => (
