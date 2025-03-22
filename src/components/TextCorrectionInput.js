@@ -212,7 +212,7 @@ const TextCorrectionInput = () => {
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
                       { isRealWord && correction.length > 0 ? (
-                        <Badge bg="info" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
+                        <Badge bg="warning" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
                           {word}
                         </Badge>
                       ) : isRealWord ? (
@@ -220,7 +220,7 @@ const TextCorrectionInput = () => {
                           {word}
                         </Badge>
                       ) : correction && correction.length > 0 ? (
-                        <Badge bg="warning" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
+                        <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
                           {word}
                         </Badge>
                       ) : (
