@@ -11,6 +11,7 @@ const TextCorrectionInput = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [realWords, setRealWords] = useState([]);
 
   const wordRef = useRef(null);
   const suggestionBoxRef = useRef(null);
@@ -28,8 +29,9 @@ const TextCorrectionInput = () => {
           .post("http://localhost:8000/review", { input_text: inputText })
           .then((response) => {
             let tokenSuggestions = {};
+            let tokenRealWords = [];
 
-            response.data.doc.paragraphs.forEach((paragraph) => {
+            response.data.paragraphs.forEach((paragraph) => {
               paragraph.sentences.forEach((sentence) => {
                 let newTokens = [];
                 let prevToken = null;
@@ -65,7 +67,7 @@ const TextCorrectionInput = () => {
                 });
 
                 newTokens.forEach((token) => {
-                  if ((token.suggestions && Object.keys(token.suggestions).length > 0) || (token.word_type === 2)) {
+                  if ((token.suggestions && Object.keys(token.suggestions).length > 0) || (token.word_type === 2) || (token.word_type === 7)) {
                     var firstChar = token.source.substring(0, 1);
                     if (firstChar === firstChar.toUpperCase()) {
                         Object.keys(token.suggestions).forEach((key) => {
@@ -76,12 +78,18 @@ const TextCorrectionInput = () => {
                     if (!tokenSuggestions[token.source]) {
                       tokenSuggestions[token.source] = [];
                     }
+
+                    if (token.word_type === 7) {
+                        tokenRealWords.push(token.source);
+                    }
+
                     tokenSuggestions[token.source].push(Object.values(token.suggestions).flat());
                   }
                 });
               });
             });
 
+            setRealWords(tokenRealWords);
             setCorrections(tokenSuggestions);
             setLoading(false);
           })
@@ -192,14 +200,31 @@ const TextCorrectionInput = () => {
                   const wordOccurrenceIndex = inputText.split(/(\s+)/).slice(0, index).filter(w => w.trim() === cleanedWord).length;
                   const correction = corrections[cleanedWord] && corrections[cleanedWord][wordOccurrenceIndex];
 
+                  const isRealWord = realWords.some(realWord => {
+                    if (realWord === cleanedWord) {
+                      return true;
+                    }
+                    return false;
+                  });
+
+                  console.log(isRealWord);
+
                   return corrections[cleanedWord] ? (
                     <span key={index} className="position-relative">
-                      {correction && correction.length > 0 ? (
-                        <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
+                      { isRealWord && correction.length > 0 ? (
+                        <Badge bg="info" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
+                          {word}
+                        </Badge>
+                      ) : isRealWord ? (
+                        <Badge bg="info" className="px-2 py-1 me-1" style={{ cursor: "pointer" }}>
+                          {word}
+                        </Badge>
+                      ) : correction && correction.length > 0 ? (
+                        <Badge bg="warning" className="px-2 py-1 me-1" style={{ cursor: "pointer" }} onClick={(e) => handleWordClick(cleanedWord, wordOccurrenceIndex, e)}>
                           {word}
                         </Badge>
                       ) : (
-                        <Badge bg="warning" className="px-2 py-1 me-1" style={{ cursor: "pointer" }}>
+                        <Badge bg="danger" className="px-2 py-1 me-1" style={{ cursor: "pointer" }}>
                           {word}
                         </Badge>
                       )}
